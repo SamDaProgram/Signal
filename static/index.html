@@ -1,0 +1,897 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width,initial-scale=1" />
+    <title>Signal · Network channels → Actions</title>
+    <link rel="stylesheet" href="/style.css" />
+    <script src="/core.js" defer></script>
+    <script src="/sequences.js" defer></script>
+    <script src="/faders.js" defer></script>
+    <script src="/config-controls.js" defer></script>
+    <script src="/actions.js" defer></script>
+    <script src="/triggers.js" defer></script>
+    <script src="/shows.js" defer></script>
+    <script src="/dashboard.js" defer></script>
+    <script src="/app.js" defer></script>
+  </head>
+  <body>
+    <header>
+      <a class="brand" href="/" aria-label="Signal home"
+        ><span class="logo">⌁</span> SIGNAL
+        <span class="brand-sub">CHANNELS → ACTIONS</span></a
+      >
+      <div class="header-actions">
+        <button
+          id="show-files"
+          class="show-file-button"
+          aria-haspopup="dialog"
+          aria-controls="show-files-dialog"
+          title="Manage show files"
+        >
+          <span class="file-icon" aria-hidden="true">▤</span
+          ><span class="file-button-text"
+            ><small>SHOW FILE</small
+            ><span id="current-show">Loading…</span></span
+          ><span aria-hidden="true">⌄</span></button
+        ><span id="connection" class="badge">Connecting…</span
+        ><a id="settings-link" class="nav-link" href="#settings">Settings</a>
+      </div>
+    </header>
+    <nav class="screen-tabs" aria-label="Show screens">
+      <a id="preshow-tab" href="http://127.0.0.1:8081/">Preshow</a
+      ><a href="/#dashboard" aria-current="page">Triggers &amp; monitor</a>
+      <div class="editing-access">
+        <span id="config-lock-status" role="status"
+          >Checking editing access</span
+        ><button id="config-lock-button" disabled>Checking lock…</button>
+      </div>
+    </nav>
+    <dialog id="pin-dialog" aria-labelledby="pin-title">
+      <form id="pin-form">
+        <h2 id="pin-title">Unlock configuration</h2>
+        <p>Monitoring and preshow controls stay available without a PIN.</p>
+        <label
+          >Editing PIN<input
+            id="editing-pin"
+            type="password"
+            inputmode="numeric"
+            pattern="[0-9]{4,12}"
+            minlength="4"
+            maxlength="12"
+            autocomplete="off"
+            required /></label
+        ><label id="pin-confirm-label"
+          >Confirm PIN<input
+            id="pin-confirm"
+            type="password"
+            inputmode="numeric"
+            pattern="[0-9]{4,12}"
+            maxlength="12"
+            autocomplete="off"
+        /></label>
+        <p>
+          Use 4–12 digits. Editing locks when you reload or close this page,
+          after eight hours, or when the server restarts.
+        </p>
+        <p id="pin-error" role="alert"></p>
+        <div class="dialog-footer">
+          <button id="pin-cancel" type="button">Cancel</button
+          ><button id="pin-submit" type="submit" class="primary">
+            Unlock editing
+          </button>
+        </div>
+      </form>
+    </dialog>
+    <main>
+      <div id="notice" role="status" hidden></div>
+      <div id="dashboard-view">
+        <section class="intro">
+          <div>
+            <div class="eyebrow">YOUR LOCAL CONTROL BRIDGE</div>
+            <h1 id="dashboard-title" tabindex="-1">Your show controls</h1>
+            <p>
+              Find a trigger, edit its action, or check your incoming signal.
+            </p>
+          </div>
+          <button class="primary" id="add">＋ Add trigger</button>
+        </section>
+        <section class="output-bar" aria-label="Output controls">
+          <div>
+            <span id="output-indicator" aria-hidden="true"></span
+            ><strong id="output-state">Outputs</strong
+            ><span id="show-status">Input monitoring continues.</span>
+          </div>
+          <button id="toggle-outputs">Pause outputs</button>
+        </section>
+        <section class="panel" id="triggers-panel">
+          <div class="panel-heading">
+            <div>
+              <h2>Triggers <span id="rule-count" class="count">0</span></h2>
+              <p>
+                Your saved actions, grouped by input channel. Open a group to
+                edit or test a trigger.
+              </p>
+            </div>
+            <button id="export-channels">Export CSV</button>
+          </div>
+          <div class="trigger-tools">
+            <label class="trigger-search" for="trigger-search"
+              >Find a trigger<input
+                id="trigger-search"
+                type="search"
+                placeholder="Name, channel, group or OSC address…"
+                autocomplete="off"
+            /></label>
+            <label for="trigger-status"
+              >Status<select id="trigger-status">
+                <option value="all">All triggers</option>
+                <option value="enabled">Enabled</option>
+                <option value="disabled">Disabled</option>
+              </select></label
+            >
+            <label for="trigger-action"
+              >Action<select id="trigger-action">
+                <option value="all">All actions</option>
+                <option value="osc">OSC message</option>
+                <option value="midi">MIDI output</option>
+                <option value="script">Script</option>
+                <option value="sequence">Sequence</option>
+                <option value="fade">DMX fade</option>
+              </select></label
+            >
+            <button id="reset-trigger-filters" type="button" hidden>
+              Clear filters
+            </button>
+          </div>
+          <div class="filter-summary">
+            <span id="trigger-results" role="status"></span>
+            <div>
+              <button id="expand-groups" class="small">Expand groups</button
+              ><button id="collapse-groups" class="small">
+                Collapse groups
+              </button>
+            </div>
+          </div>
+          <div id="no-trigger-matches" class="empty" hidden>
+            <h3>No matching triggers</h3>
+            <p>Try another name or clear the filters to see all triggers.</p>
+          </div>
+          <div id="rules" class="trigger-groups"></div>
+          <div id="empty" class="empty">
+            <span>↗</span>
+            <h3>Connect a channel to an action</h3>
+            <p>
+              Add your first trigger to send OSC when a DMX level reaches 100 —
+              or any level you choose.
+            </p>
+            <button id="first-add">＋ Add your first trigger</button>
+          </div>
+        </section>
+        <section class="panel" id="sequence-monitor">
+          <div class="panel-heading">
+            <div>
+              <h2>Sequence playback</h2>
+              <p>
+                Live step progress · Last 32 runs · Cancel stops pending steps;
+                running scripts finish.
+              </p>
+            </div>
+          </div>
+          <div id="sequence-runs" class="sequence-runs">
+            <p>
+              No sequences have run yet. Choose Action sequence in a trigger to
+              build one.
+            </p>
+          </div>
+        </section>
+        <details class="panel" id="monitor-panel">
+          <summary class="monitor-summary">
+            <div>
+              <h2>Channel monitor &amp; connection</h2>
+              <p>
+                Inspect live DMX levels and find the address for your
+                controller.
+              </p>
+            </div>
+            <span class="monitor-toggle" aria-hidden="true">Expand</span>
+          </summary>
+          <section class="network-help">
+            <div class="panel-heading">
+              <div>
+                <h2>Send data here</h2>
+                <p id="receive-endpoint">
+                  Detecting this Mac’s network addresses…
+                </p>
+                <p id="receive-help">
+                  Use a network IP from the same network as your lighting
+                  controller.
+                </p>
+              </div>
+              <button id="refresh-network">Refresh IPs</button>
+            </div>
+          </section>
+
+          <section class="stats" aria-label="Bridge statistics">
+            <div>
+              <span id="input-name">ART-NET INPUT</span
+              ><strong>UDP <em id="input-port">6454</em></strong
+              ><small id="input-status">Waiting for a source</small>
+            </div>
+            <div>
+              <span>INPUT PACKETS</span><strong id="packets">0</strong
+              ><small>Since input was selected</small>
+            </div>
+            <div>
+              <span>ACTIONS COMPLETED</span><strong id="sent">0</strong
+              ><small>This session · See Activity for results</small>
+            </div>
+            <div>
+              <span>ENABLED TRIGGERS</span><strong id="enabled">0</strong
+              ><small>Threshold triggers + DMX followers</small>
+            </div>
+          </section>
+          <section class="monitor-content">
+            <div class="panel-heading">
+              <div>
+                <h2>Live input</h2>
+                <p id="source">Waiting for Art-Net data</p>
+              </div>
+              <label class="universe-label"
+                ><span id="monitor-label">Universe</span>
+                <input
+                  id="universe"
+                  type="number"
+                  min="0"
+                  max="32767"
+                  value="0"
+                  aria-label="Monitor universe"
+              /></label>
+            </div>
+            <div class="monitor-info">
+              <span id="frame-status">NO SIGNAL</span
+              ><span
+                ><span id="channel-range">Channels 1–512</span>
+                <span class="separator">/</span> Levels 0–255
+                <span class="separator">/</span> <i></i> Assigned trigger</span
+              >
+            </div>
+            <div class="monitor-tools">
+              <label for="channel-visibility"
+                >Show channels<select id="channel-visibility">
+                  <option value="all">All 512 channels</option>
+                  <option value="assigned">Assigned channels only</option>
+                </select></label
+              >
+            </div>
+            <p id="monitor-empty" class="panel-foot" hidden>
+              No triggers are assigned in this universe / block. Choose All 512
+              channels to inspect incoming data.
+            </p>
+            <div
+              id="channels"
+              class="channels"
+              aria-label="Live channel levels"
+            ></div>
+            <div class="panel-foot" id="monitor-help">
+              Hover for connected triggers; click to view details or add a
+              trigger.
+            </div>
+          </section>
+        </details>
+        <section class="panel" id="activity-panel">
+          <div class="panel-heading">
+            <div>
+              <h2>Activity</h2>
+              <p>Latest sends and errors · up to 100 events</p>
+            </div>
+            <div class="activity-actions">
+              <span class="badge neutral">THIS SESSION</span
+              ><button id="clear-log" class="small">Clear log</button>
+            </div>
+          </div>
+          <div id="events" class="events">
+            <p class="muted">Messages will appear here when a trigger fires.</p>
+          </div>
+        </section>
+      </div>
+      <section id="settings-view" aria-labelledby="settings-title" hidden>
+        <a class="back-link" href="#dashboard">← Back to dashboard</a>
+        <div class="intro">
+          <div>
+            <div class="eyebrow">BRIDGE CONFIGURATION</div>
+            <h1 id="settings-title" tabindex="-1">Settings</h1>
+            <p>Manage input, reusable action presets, and script execution.</p>
+          </div>
+        </div>
+        <section class="panel">
+          <div class="panel-heading">
+            <div>
+              <h2>Action controls</h2>
+              <p>
+                Outputs can be paused on the dashboard. Enabling outputs uses
+                the current levels as a baseline.
+              </p>
+            </div>
+          </div>
+          <div class="input-options">
+            <label class="check"
+              ><input id="scripts-enabled" type="checkbox" /> Allow custom
+              scripts for this session</label
+            >
+            <p>
+              Scripts run as your Mac user. Choose an executable and arguments;
+              shell syntax is not evaluated. Maximum four scripts at once, with
+              a configurable timeout. Loading a show resets this switch. Pausing
+              outputs prevents new actions; running scripts finish.
+            </p>
+            <button id="refresh-midi">Refresh MIDI outputs</button>
+            <p id="midi-status">
+              MIDI uses optional mido + python-rtmidi packages. OSC and scripts
+              need no extra packages.
+            </p>
+          </div>
+        </section>
+        <section class="panel input-panel">
+          <div class="panel-heading">
+            <div>
+              <h2>Input protocol</h2>
+              <p>
+                One active input. Your trigger assignments stay saved when you
+                switch.
+              </p>
+            </div>
+            <label class="protocol-label"
+              >Receive from<select id="protocol" aria-label="Input protocol">
+                <option value="artnet">Art-Net</option>
+                <option value="e131">E1.31 / sACN</option>
+                <option value="ddp">DDP</option>
+              </select></label
+            >
+          </div>
+          <div id="sacn-settings" class="input-options" hidden>
+            <label
+              >Mac network IPv4 for multicast<input
+                id="sacn-interface"
+                value="0.0.0.0"
+                aria-label="sACN multicast interface" /></label
+            ><button id="save-interface">Save interface</button>
+            <p>
+              0.0.0.0 selects the default interface. Joins the monitored
+              universe and universes used by enabled triggers. Unicast also
+              works.
+            </p>
+          </div>
+          <div id="protocol-help" class="panel-foot"></div>
+        </section>
+        <section class="panel">
+          <div class="panel-heading">
+            <div>
+              <h2>Action presets</h2>
+              <p>
+                Link reusable OSC, MIDI, script, sequence, or DMX fade
+                configurations to triggers.
+              </p>
+            </div>
+            <button id="add-preset">＋ Add preset</button>
+          </div>
+          <div id="presets" class="presets"></div>
+        </section>
+      </section>
+      <footer>
+        <span><b>SIGNAL</b> · Network channels to actions</span
+        ><span>Local control. Settings saved on this Mac.</span>
+      </footer>
+    </main>
+    <dialog id="show-files-dialog" aria-labelledby="show-files-title">
+      <div class="dialog-header">
+        <div>
+          <div class="eyebrow">WORKSPACE</div>
+          <h2 id="show-files-title">Show files</h2>
+        </div>
+        <button
+          id="close-show-files"
+          class="icon-button"
+          aria-label="Close show files"
+        >
+          ×
+        </button>
+      </div>
+      <div class="active-show-card">
+        <span class="file-icon" aria-hidden="true">▤</span>
+        <div>
+          <strong id="active-show-name">Loading…</strong>
+          <p>Active show · Changes save automatically</p>
+        </div>
+      </div>
+      <div class="file-quick-actions">
+        <button id="save-show">Save now</button
+        ><button id="download-show">↓ Download show</button>
+      </div>
+      <section class="file-section">
+        <h3>Open a show</h3>
+        <label for="show-select">From your show directory</label>
+        <div class="file-open-row">
+          <select id="show-select" aria-label="Saved shows"></select
+          ><button id="load-show" class="primary">Open selected</button>
+        </div>
+        <button id="upload-show" class="file-upload">
+          ↑ Upload a show from your computer</button
+        ><input
+          id="show-upload"
+          type="file"
+          accept=".json,application/json"
+          hidden
+        />
+        <p>Opening or uploading a show pauses outputs.</p>
+      </section>
+      <section class="file-section">
+        <h3>Create a show</h3>
+        <label for="show-name">New filename</label
+        ><input
+          id="show-name"
+          placeholder="e.g. Friday night.json"
+          maxlength="101"
+        />
+        <div class="file-create-actions">
+          <button id="new-show">＋ New blank show</button
+          ><button id="copy-show">Save a copy</button>
+        </div>
+      </section>
+      <p id="show-file-error" role="alert" hidden></p>
+      <details class="file-location">
+        <summary>Show directory</summary>
+        <p id="show-directory"></p>
+      </details>
+    </dialog>
+    <dialog id="editor" aria-labelledby="dialog-title">
+      <form id="form">
+        <div class="dialog-header">
+          <div>
+            <div class="eyebrow">DMX → ACTION</div>
+            <h2 id="dialog-title">New trigger</h2>
+          </div>
+          <button
+            type="button"
+            class="icon-button"
+            id="close"
+            aria-label="Close editor"
+          >
+            ×
+          </button>
+        </div>
+        <label
+          >Trigger name<input
+            name="name"
+            required
+            maxlength="100"
+            placeholder="e.g. Start playback"
+        /></label>
+        <h3 class="form-section-title">1. Choose an input channel</h3>
+        <div class="form-row three">
+          <label
+            ><span id="editor-universe-label">Universe (0-based)</span
+            ><input
+              name="universe"
+              type="number"
+              min="0"
+              max="32767"
+              required
+              value="0" /></label
+          ><label
+            >Channel<input
+              name="channel"
+              type="number"
+              min="1"
+              max="512"
+              required
+              value="1" /></label
+          ><label
+            >Condition<select
+              name="operator"
+              id="operator"
+              aria-label="Condition"
+            >
+              <option value="gte">≥ At least</option>
+              <option value="gt">&gt; Greater than</option>
+              <option value="lte">≤ At most</option>
+              <option value="lt">&lt; Less than</option>
+              <option value="eq">= Equal to</option>
+              <option value="range">Between (inclusive)</option>
+            </select></label
+          >
+        </div>
+        <div class="form-row">
+          <label
+            ><span id="level-label">Level</span
+            ><input
+              name="threshold"
+              type="number"
+              min="0"
+              max="255"
+              required
+              value="100" /></label
+          ><label id="upper-level" hidden
+            >Through level<input
+              name="threshold_max"
+              type="number"
+              min="0"
+              max="255"
+              value="149"
+          /></label>
+        </div>
+        <p id="editor-protocol" class="muted"></p>
+        <h3 class="form-section-title">2. Choose an action</h3>
+        <label
+          >Action preset<select id="device-preset" aria-label="Action preset">
+            <option value="">Custom destination</option>
+          </select></label
+        >
+        <p class="preset-note">
+          Linked fields are locked and follow preset edits automatically. Select
+          Custom action to detach and edit them.
+        </p>
+        <div class="osc-fields">
+          <div class="form-row">
+            <label
+              >OSC destination IPv4<input
+                name="host"
+                required
+                placeholder="192.168.1.50"
+                value="127.0.0.1" /></label
+            ><label
+              >UDP port<input
+                name="port"
+                type="number"
+                min="1"
+                max="65535"
+                required
+                value="8000"
+            /></label>
+          </div>
+          <label
+            >OSC address<input
+              name="address"
+              required
+              pattern="/\S*"
+              placeholder="/playback/go"
+              value="/go"
+          /></label>
+          <div class="argument-heading">
+            <label>Arguments <span>(optional)</span></label
+            ><button type="button" id="add-arg" class="small">
+              ＋ Argument
+            </button>
+          </div>
+          <div id="arguments"></div>
+        </div>
+        <details id="trigger-advanced" class="advanced-options">
+          <summary>Advanced · cooldown &amp; matching rules</summary>
+          <label
+            >Cooldown (milliseconds)<input
+              name="cooldown_ms"
+              type="number"
+              min="0"
+              max="3600000"
+              value="0"
+          /></label>
+          <p class="preset-note">
+            0 disables cooldown. Transitions during cooldown are skipped. Manual
+            Test bypasses cooldown.
+          </p>
+          <div class="form-note">
+            Use separate ranges, such as 100–149 and 150–199, to select
+            different messages. If conditions overlap, the narrowest range wins;
+            equal-width ties use the first saved trigger. A message sends when
+            the selected trigger changes. Passing through several ranges during
+            a fade can still send each one. Saving uses the current live level
+            as a baseline.
+          </div>
+        </details>
+        <label class="check"
+          ><input name="enabled" type="checkbox" checked /> Enable this
+          trigger</label
+        >
+        <p id="form-error" role="alert"></p>
+        <div class="dialog-footer">
+          <button type="button" id="cancel">Cancel</button
+          ><button class="primary" type="submit" id="save">Save trigger</button>
+        </div>
+      </form>
+    </dialog>
+    <dialog id="delete-dialog">
+      <form method="dialog">
+        <h2>Remove trigger?</h2>
+        <p id="delete-name"></p>
+        <div class="dialog-footer">
+          <button value="cancel">Cancel</button
+          ><button value="delete" class="danger">Remove trigger</button>
+        </div>
+      </form>
+    </dialog>
+    <dialog id="preset-editor">
+      <form id="preset-form">
+        <div class="dialog-header">
+          <h2 id="preset-title">New action preset</h2>
+          <button
+            type="button"
+            id="close-preset"
+            class="icon-button"
+            aria-label="Close preset editor"
+          >
+            ×
+          </button>
+        </div>
+        <label
+          >Preset name<input
+            name="name"
+            required
+            maxlength="100"
+            placeholder="e.g. Playback Mac"
+        /></label>
+        <div class="osc-fields">
+          <div class="form-row">
+            <label
+              >Device IPv4 address<input
+                name="host"
+                required
+                placeholder="192.168.1.50"
+                value="127.0.0.1" /></label
+            ><label
+              >Device UDP port<input
+                name="port"
+                type="number"
+                min="1"
+                max="65535"
+                required
+                value="8000"
+            /></label>
+          </div>
+          <label
+            >Default OSC address (optional)<input
+              name="address"
+              pattern="/\S*"
+              placeholder="e.g. /go"
+          /></label>
+        </div>
+        <p class="preset-note">
+          A blank OSC address leaves each trigger’s address editable. Preset
+          edits update all linked triggers. Removing a preset detaches its
+          triggers and keeps their last values.
+        </p>
+        <p id="preset-error" role="alert"></p>
+        <div class="dialog-footer">
+          <button type="button" id="cancel-preset">Cancel</button
+          ><button type="submit" class="primary" id="save-preset">
+            Save preset
+          </button>
+        </div>
+      </form>
+    </dialog>
+    <dialog id="delete-preset-dialog">
+      <form method="dialog">
+        <h2>Remove action preset?</h2>
+        <p id="delete-preset-name"></p>
+        <div class="dialog-footer">
+          <button value="cancel">Cancel</button
+          ><button value="delete" class="danger">Remove preset</button>
+        </div>
+      </form>
+    </dialog>
+    <dialog id="group-editor">
+      <form id="group-form">
+        <div class="dialog-header">
+          <h2>Label group</h2>
+          <button
+            type="button"
+            id="close-group"
+            class="icon-button"
+            aria-label="Close group editor"
+          >
+            ×
+          </button>
+        </div>
+        <p id="group-location"></p>
+        <label
+          >Group label<input
+            name="label"
+            maxlength="100"
+            placeholder="e.g. Main stage playback"
+        /></label>
+        <p class="preset-note">
+          Leave blank to remove the label. Labels stay with this universe /
+          block and channel.
+        </p>
+        <p id="group-error" role="alert"></p>
+        <div class="dialog-footer">
+          <button type="button" id="cancel-group">Cancel</button
+          ><button type="submit" id="save-group" class="primary">
+            Save label
+          </button>
+        </div>
+      </form>
+    </dialog>
+    <dialog id="channel-editor" aria-labelledby="channel-title">
+      <div class="dialog-header">
+        <div>
+          <div id="channel-label" class="eyebrow"></div>
+          <h2 id="channel-title">Channel</h2>
+        </div>
+        <button
+          type="button"
+          id="close-channel"
+          class="icon-button"
+          aria-label="Close channel details"
+        >
+          ×
+        </button>
+      </div>
+      <p id="channel-level"></p>
+      <p id="channel-empty">No triggers are connected to this channel yet.</p>
+      <div id="channel-triggers"></div>
+      <div class="dialog-footer">
+        <button type="button" id="channel-add" class="primary">
+          ＋ Add trigger on this channel
+        </button>
+      </div>
+    </dialog>
+    <dialog id="sequence-editor" aria-labelledby="sequence-title">
+      <div class="dialog-header">
+        <div>
+          <div class="eyebrow">SEQUENCE BUILDER</div>
+          <h2 id="sequence-title">Action sequence</h2>
+        </div>
+        <button
+          id="close-sequence"
+          type="button"
+          class="icon-button"
+          aria-label="Close sequence builder"
+        >
+          ×
+        </button>
+      </div>
+      <p>
+        Each delay is measured from the previous step’s scheduled start. Scripts
+        launch on the timeline and run in the background.
+      </p>
+      <div class="sequence-view-controls">
+        <label
+          >Drive sequence with<select id="sequence-source">
+            <option value="time">Time after trigger</option>
+            <option value="dmx">DMX fader / cue crossings</option>
+          </select></label
+        ><label id="sequence-direction-label" hidden
+          >Fire cues<select id="sequence-direction">
+            <option value="forward">Forward only</option>
+            <option value="both">Both directions</option>
+          </select></label
+        >
+      </div>
+      <p id="sequence-source-help" class="preset-note"></p>
+      <div class="sequence-toolbar">
+        <button id="add-sequence-step" type="button">＋ Add step</button
+        ><button id="preview-sequence" type="button">▶ Preview timing</button
+        ><button id="stop-preview" type="button" hidden>Reset preview</button
+        ><span id="sequence-summary"></span>
+      </div>
+      <label id="sequence-follow-label" class="check" hidden
+        ><input type="checkbox" id="sequence-follow" />Follow live DMX (preview
+        only)</label
+      >
+      <p id="sequence-preview-status" role="status">
+        Preview animates timing only. No outputs are sent.
+      </p>
+      <div class="sequence-view-controls">
+        <label
+          >Snap<select id="sequence-snap">
+            <option value="1">Off (1 ms)</option>
+            <option value="10">10 ms</option>
+            <option value="100" selected>100 ms</option>
+            <option value="500">500 ms</option>
+            <option value="1000">1 s</option>
+          </select></label
+        ><label
+          >Zoom<select id="sequence-zoom">
+            <option value="1">Fit</option>
+            <option value="2">2×</option>
+            <option value="4">4×</option>
+            <option value="8">8×</option>
+          </select></label
+        ><label
+          >Preview speed<select id="sequence-speed">
+            <option value="0.25">0.25×</option>
+            <option value="0.5">0.5×</option>
+            <option value="1" selected>1×</option>
+            <option value="2">2×</option>
+          </select></label
+        >
+      </div>
+      <p class="preset-note">
+        Drag the ruler or empty track to inspect time. Drag a numbered marker to
+        change its delay and shift later steps. Arrow keys nudge a focused
+        marker; hold Shift for 1 ms precision. Preview sends no outputs.
+      </p>
+      <label class="sequence-scrub-label"
+        >Inspect time<input
+          id="sequence-scrub"
+          type="range"
+          min="0"
+          max="1000"
+          value="0"
+          step="1"
+          aria-label="Preview time"
+      /></label>
+      <div
+        id="sequence-timeline"
+        class="sequence-timeline"
+        aria-label="Sequence timeline"
+      ></div>
+      <div class="sequence-workspace">
+        <div>
+          <h3>Steps</h3>
+          <div id="sequence-step-list" class="sequence-step-list"></div>
+          <label class="sequence-error-label"
+            >On action error<select id="sequence-on-error">
+              <option value="stop">Stop remaining steps</option>
+              <option value="continue">Continue remaining steps</option>
+            </select></label
+          >
+        </div>
+        <form id="step-form">
+          <h3 id="step-title">Step details</h3>
+          <label>Step name<input name="name" maxlength="100" required /></label
+          ><label
+            >Delay before this step (ms)<input
+              name="delay_ms"
+              type="number"
+              min="0"
+              max="600000"
+              value="0"
+              required
+          /></label>
+          <div class="osc-fields">
+            <div class="form-row">
+              <label
+                >OSC destination IPv4<input
+                  name="host"
+                  value="127.0.0.1"
+                  required /></label
+              ><label
+                >UDP port<input
+                  name="port"
+                  type="number"
+                  min="1"
+                  max="65535"
+                  value="8000"
+                  required
+              /></label>
+            </div>
+            <label
+              >OSC address<input
+                name="address"
+                value="/go"
+                pattern="/\S*"
+                required
+            /></label>
+            <div class="argument-heading">
+              <label>Arguments <span>(optional)</span></label
+              ><button type="button" id="add-step-arg" class="small">
+                ＋ Argument
+              </button>
+            </div>
+            <div id="step-arguments"></div>
+          </div>
+          <p id="sequence-step-error" role="alert"></p>
+          <button type="submit" id="apply-sequence-step">Apply step</button>
+        </form>
+      </div>
+      <p id="sequence-error" role="alert"></p>
+      <div class="dialog-footer">
+        <button id="discard-sequence" type="button">Discard changes</button
+        ><button id="use-sequence" class="primary" type="button">
+          Use sequence
+        </button>
+      </div>
+    </dialog>
+  </body>
+</html>

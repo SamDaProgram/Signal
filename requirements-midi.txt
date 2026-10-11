@@ -1,0 +1,3 @@
+# Optional. OSC and script actions use only the Python standard library.
+mido>=1.3,<2
+python-rtmidi>=1.5,<2

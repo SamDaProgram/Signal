@@ -1,0 +1,127 @@
+{
+  "version": 1,
+  "input": {
+    "protocol": "artnet",
+    "sacn_interface": "0.0.0.0",
+    "monitor_universe": 0
+  },
+  "rules": [
+    {
+      "name": "Start playback",
+      "enabled": true,
+      "host": "127.0.0.1",
+      "universe": 0,
+      "channel": 1,
+      "operator": "gte",
+      "threshold_max": 255,
+      "threshold": 100,
+      "port": 9000,
+      "address": "/playback/go",
+      "args": [],
+      "id": "412d09b4-53ed-4316-ac45-fe485a5899fb"
+    },
+    {
+      "name": "Stage brightness",
+      "enabled": true,
+      "host": "127.0.0.1",
+      "universe": 0,
+      "channel": 2,
+      "operator": "gte",
+      "threshold_max": 255,
+      "threshold": 0,
+      "port": 9000,
+      "address": "/stage/brightness",
+      "args": [],
+      "action": "fade",
+      "cooldown_ms": 0,
+      "fade_type": "f",
+      "fade_curve": "smooth",
+      "fade_rate": 30,
+      "fade_keyframes": [
+        {
+          "level": 0,
+          "values": [
+            0.0
+          ]
+        },
+        {
+          "level": 128,
+          "values": [
+            0.5
+          ]
+        },
+        {
+          "level": 255,
+          "values": [
+            1.0
+          ]
+        }
+      ],
+      "fade_range": {
+        "min": 0,
+        "max": 1
+      },
+      "fade_input_display": "dmx",
+      "id": "04f62fe0-7d28-4358-a18d-c118b2fddb40"
+    },
+    {
+      "name": "Welcome sequence",
+      "enabled": true,
+      "host": "127.0.0.1",
+      "universe": 0,
+      "channel": 3,
+      "operator": "gte",
+      "threshold_max": 255,
+      "threshold": 150,
+      "port": 8000,
+      "address": "/go",
+      "args": [],
+      "action": "sequence",
+      "sequence_source": "time",
+      "sequence_direction": "forward",
+      "sequence_on_error": "stop",
+      "steps": [
+        {
+          "host": "127.0.0.1",
+          "port": 9000,
+          "address": "/house/brightness",
+          "args": [
+            {
+              "type": "f",
+              "value": 0.2
+            }
+          ],
+          "name": "House lights down",
+          "action": "osc",
+          "delay_ms": 0
+        },
+        {
+          "host": "127.0.0.1",
+          "port": 9000,
+          "address": "/playback/go",
+          "args": [],
+          "name": "Start playback",
+          "action": "osc",
+          "delay_ms": 500
+        },
+        {
+          "host": "127.0.0.1",
+          "port": 9000,
+          "address": "/stage/brightness",
+          "args": [
+            {
+              "type": "f",
+              "value": 1.0
+            }
+          ],
+          "name": "Stage lights up",
+          "action": "osc",
+          "delay_ms": 1500
+        }
+      ],
+      "id": "d90cd2e8-eebf-4603-9d88-490caf80588b"
+    }
+  ],
+  "presets": [],
+  "group_labels": {}
+}

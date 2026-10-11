@@ -1,0 +1,12 @@
+<!doctype html>
+<html lang="en">
+<head><meta charset="utf-8"><meta name="viewport" content="width=device-width, initial-scale=1"><title>Show control · Signal</title><link rel="stylesheet" href="/preshow.css"><script src="/preshow.js" defer></script></head>
+<body><main>
+<nav class="screen-tabs" aria-label="Show screens"><a href="/" aria-current="page">Preshow</a><a id="config-tab" href="http://127.0.0.1/">Config &amp; monitor</a></nav>
+<header aria-label="Current show status">
+<div class="current-status"><p class="eyebrow">CURRENT STATUS</p><div class="status-line"><span id="status-dot" class="dot" aria-hidden="true"></span><h1 id="status" aria-live="polite">Checking status…</h1></div></div>
+<span id="connection" role="status">Connecting…</span>
+</header>
+<button id="show-action" disabled aria-describedby="action-description"><span id="action-icon" aria-hidden="true">◐</span><span id="action-title">Start preshow</span><span id="action-description">Waiting for show status…</span></button>
+<p id="error" role="alert" hidden></p>
+</main></body></html>
